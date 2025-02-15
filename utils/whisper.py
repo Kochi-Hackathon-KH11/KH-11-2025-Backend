@@ -26,6 +26,15 @@ pipe = pipeline(
 )
 
 def clean_text(input_text):
+    """
+    Cleans the transcribed text by removing unnecessary repetitions, interjections, and excessive spaces.
+
+    Args:
+        input_text (str): The raw transcribed text.
+
+    Returns:
+        str: The cleaned text.
+    """
     text = re.sub(r'\s+a\s+(?=\w+)', ' ', input_text)  # "a" between words
     
     for _ in range(2):
@@ -41,17 +50,18 @@ def clean_text(input_text):
     return text  
 
 def speech_to_text_from_file(input_file):
+    """
+    Converts an audio file to text using the ASR model and cleans the transcription.
+
+    Args:
+        input_file (str): Path to the input audio file.
+
+    Returns:
+        str: The cleaned transcribed text.
+    """
     try:
         response = pipe(input_file)
         cleaned_text = clean_text(response['text'])
         return cleaned_text
     except:
         return ""
-
-
-# def speech_to_text_from_stream(input_stream):
-#     try:
-#         response = pipe({
-#             "array": 
-#         })
-    

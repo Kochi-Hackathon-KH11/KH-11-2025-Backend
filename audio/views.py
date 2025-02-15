@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError, APIException
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
 from utils.whisper import speech_to_text_from_file
-from utils.file import save_audio_file, buffer_to_audio
+from utils.file import save_audio_file, buffer_to_audio, save_webm_as_wav
 from utils.tts import text_to_speech
 from rest_framework import status
 from django.http import FileResponse, StreamingHttpResponse
@@ -20,12 +20,8 @@ class AudioUploadView(APIView):
     def post(self, request):
         file_obj = request.FILES.get('audio-file')
         if file_obj.name.endswith('.webm'):
-            save_path = save_audio_file(file_obj)
-            audio = AudioSegment.from_file(save_path, format="webm")
-            audio = audio.set_frame_rate(16000).set_channels(1).set_sample_width(2)  # 16-bit PCM
-            audio.export("media/output.wav", format="wav")
-            output_path = "media/output.wav"
-        elif file_obj.name.endswith('.mp3') and not file_obj.name.endswith('.wav'):
+            output_path = save_webm_as_wav(file_obj)
+        elif not file_obj.name.endswith('.mp3') and not file_obj.name.endswith('.wav'):
             raise ValidationError()
         else:
             output_path = save_audio_file(file_obj)
@@ -48,8 +44,12 @@ class AudioStreamView(APIView):
     
     def post(self, request):
         file_obj = request.FILES.get('audio-file')
-        if not file_obj.name.endswith('.mp3') and not file_obj.name.endswith('.wav'):
+        if file_obj.name.endswith('.webm'):
+            output_path = save_webm_as_wav(file_obj)
+        elif not file_obj.name.endswith('.mp3') and not file_obj.name.endswith('.wav'):
             raise ValidationError()
+        else:
+            output_path = save_audio_file(file_obj)
         
         output_path = save_audio_file(file_obj)
         
