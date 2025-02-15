@@ -1,6 +1,7 @@
-from rest_framework.generics import CreateAPIView
-from rest_framework.permissions import AllowAny
-from .serializers import RegisterSerializer
+from rest_framework.generics import CreateAPIView, ListAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .serializers import RegisterSerializer, CallHistorySerializer
+from .models import CallHistory
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 class RegisterView(CreateAPIView):
@@ -26,3 +27,13 @@ class RegisterView(CreateAPIView):
                 'refresh': str(refresh),
             }
         })
+        
+        
+class CallHistoryView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CallHistorySerializer
+        
+    def get_queryset(self):
+        user = self.request.user
+        return CallHistory.objects.filter(sender=user) | CallHistory.objects.filter(receiver=user)
+    

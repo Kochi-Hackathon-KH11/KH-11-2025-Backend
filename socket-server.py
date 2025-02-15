@@ -7,6 +7,7 @@ django.setup()
 
 
 from django.contrib.auth.models import User
+from user.models import CallHistory
 from django.contrib.auth import authenticate
 import socketio
 import eventlet
@@ -20,7 +21,7 @@ connected_users = {}
 connected_users_sid = {}
 
 def get_sid(user):
-    return connected_users_sid[user.username] or None
+    return connected_users_sid.get(user.username) or None
 
 @sio.event()
 def connect(sid, environ):
@@ -33,7 +34,7 @@ def authenticate_user(sid, data):
     password = data.get('password')
     
     user = authenticate(username=username, password=password)
-    
+    print(user)
     if user:
         connected_users[sid] = user
         connected_users_sid[user.username] = sid
@@ -50,7 +51,9 @@ def get_all_users(sid):
     dataToSend = []
     for user in users:
         sid = get_sid(user)
-        dataToSend.append({ 'username': user.username, 'sid': sid, 'online': (sid is not None) })        
+        dataToSend.append({ 'username': user.username, 'sid': sid, 'online': (sid is not None) })    
+        
+    sio.emit("all_users", data=dataToSend, room=sid)    
     
 @sio.event
 def offer(sid, data):
@@ -71,6 +74,34 @@ def answer(sid, data):
 
     target_sid = data["to"]
     sio.emit("answer", data, room=target_sid)
+    
+    
+@sio.event 
+def reject(sid, data):
+    if sid not in connected_users:
+        sio.emit("auth_error", { 'message': "Unauthorized" }, room=sid)
+        
+    target_sid = data['to']
+    sio.emit('reject', data, room=target_sid)
+    
+    
+@sio.event 
+def end_call(sid, data):
+    if sid not in connected_users:
+        sio.emit("auth_error", { 'message': "Unauthorized" }, room=sid)
+        
+    target_sid = data['to']
+    sio.emit("end_call", data, room=target_sid)
+    
+@sio.event 
+def add_call_history(sid, data):
+    if sid not in connected_users:
+        sio.emit("auth_error", { 'message': "Unauthorized" }, room=sid)
+        
+    sender = connected_users[sid]
+    receiver = connected_users[data['to']]
+    
+    new_call_history = CallHistory(sender=sender, receiver=receiver, duration=data['duration'], accepted=data['accepted'])    
 
 @sio.event
 def candidate(sid, data):
