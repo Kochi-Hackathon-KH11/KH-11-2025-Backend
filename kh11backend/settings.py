@@ -29,20 +29,19 @@ SECRET_KEY = 'django-insecure-q_e09qpqm8mfe9a3ioa20#59nr41)9^@jzgbr-k1e-)iyvwgn2
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_ALL_METHODS = True
+
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'audio',
@@ -121,6 +120,17 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 ]
 
 

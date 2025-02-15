@@ -46,7 +46,7 @@ def speech_to_text_from_file(input_file):
         cleaned_text = clean_text(response['text'])
         return cleaned_text
     except:
-        return None
+        return ""
 
 
 # def speech_to_text_from_stream(input_stream):
