@@ -1,7 +1,7 @@
 from transformers import pipeline
 from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
 import torch
-import numpy as np
+import re
 
 MODEL_ID = 'arielcerdap/largev3-turbo-stutter'
 
@@ -25,11 +25,33 @@ pipe = pipeline(
     device=device
 )
 
-def test_file(input_file):
-    response = pipe(input_file)
-    return response
+def clean_text(input_text):
+    text = re.sub(r'\s+a\s+(?=\w+)', ' ', input_text)  # "a" between words
+    
+    for _ in range(2):
+        text = re.sub(r'\b(\w+\s\w+\s\w+)( \1)+\b', r'\1', text)
+        text = re.sub(r'\b(\w+\s\w+)( \1)+\b', r'\1', text)
+        text = re.sub(r'\b(\w+)( \1)+\b', r'\1', text)
+    
+    interjections = ["damn it", "uh", "um"]
+    for expr in interjections:
+        text = re.sub(fr'\s*{expr}\s*', ' ', text)
+    
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text  
 
-def test_buffer(buffer):
-    print(buffer)
-    response = pipe({ 'raw': np.array(buffer['audio']['array']), 'sampling_rate': buffer['audio']['sampling_rate']})
-    return response
+def speech_to_text_from_file(input_file):
+    try:
+        response = pipe(input_file)
+        cleaned_text = clean_text(response['text'])
+        return cleaned_text
+    except:
+        return None
+
+
+# def speech_to_text_from_stream(input_stream):
+#     try:
+#         response = pipe({
+#             "array": 
+#         })
+    
