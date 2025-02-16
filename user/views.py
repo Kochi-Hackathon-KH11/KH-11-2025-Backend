@@ -2,7 +2,7 @@ from rest_framework.generics import CreateAPIView, ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import RegisterSerializer, CallHistorySerializer
 from .models import CallHistory
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework.response import Response
 class RegisterView(CreateAPIView):
     permission_classes = [AllowAny]
@@ -13,7 +13,6 @@ class RegisterView(CreateAPIView):
         serializer.is_valid(raise_exception=True)
         
         user = serializer.save()
-        
         refresh = RefreshToken.for_user(user)
         
         return Response({

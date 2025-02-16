@@ -7,6 +7,7 @@ django.setup()
 
 
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.tokens import AccessToken
 from user.models import CallHistory
 from django.contrib.auth import authenticate
 import socketio
@@ -23,6 +24,22 @@ connected_users_sid = {}
 def get_sid(user):
     return connected_users_sid.get(user.username) or None
 
+
+def verify_jwt_token(token):
+    """ Verify JWT token and return the authenticated user """
+    try:
+        access_token = AccessToken(token)
+        print("Decoded Token Payload:", access_token.payload)  # Debugging line
+        user_id = access_token["user_id"]  # Ensure key exists
+        user = User.objects.get(id=user_id)
+        return user
+    except KeyError:
+        print("JWT payload missing 'user_id'")
+    except Exception as e:
+        print(f"JWT verification failed: {e}")
+    return None
+    
+
 @sio.event()
 def connect(sid, environ):
     sio.emit('ack', room=sid)
@@ -30,16 +47,21 @@ def connect(sid, environ):
     
 @sio.event 
 def authenticate_user(sid, data):
-    username = data.get('username')
-    password = data.get('password')
+    token = data.get('jwt')
     
-    user = authenticate(username=username, password=password)
+    user = verify_jwt_token(token)
     print(user)
     if user:
         connected_users[sid] = user
         connected_users_sid[user.username] = sid
         sio.emit("authenticated", {"message": "Authentication successful"}, room=sid)
-        print(f"User {username} authenticated with SID {sid}")
+        users = User.objects.all()
+        dataToSend = []
+        for user in users:
+            sid = get_sid(user)
+            dataToSend.append({ 'username': user.username, 'sid': sid, 'online': (sid is not None) })    
+        sio.emit("all_users", data=dataToSend, room=None)
+        print(f"User {user.username} authenticated with SID {sid}")
     else:
         sio.emit("auth_error", {"message": "Invalid credentials"}, room=sid)
         
@@ -63,6 +85,8 @@ def offer(sid, data):
         return
 
     target_sid = data["to"]
+    data['from'] = connected_users[sid].username
+    data['from-sid'] = sid
     sio.emit("offer", data, room=target_sid)
 
 @sio.event
@@ -75,6 +99,14 @@ def answer(sid, data):
     target_sid = data["to"]
     sio.emit("answer", data, room=target_sid)
     
+@sio.event
+def end_call(sid, data):
+    if sid not in connected_users:
+        sio.emit("auth_error", {"message": "Unauthorized"}, room=sid)
+        return
+    
+    target_sid = data['to']
+    sio.emit('end_call', room=target_sid)
     
 @sio.event 
 def reject(sid, data):
@@ -120,6 +152,13 @@ def disconnect(sid):
         print(f"User {connected_users[sid].username} disconnected")
         del connected_users[sid]
     print(f"Client disconnected: {sid}")
+    
+    users = User.objects.all()
+    dataToSend = []
+    for user in users:
+        sid = get_sid(user)
+        dataToSend.append({ 'username': user.username, 'sid': sid, 'online': (sid is not None) })    
+    sio.emit("all_users", data=dataToSend, room=None)
 
 if __name__ == "__main__":
     eventlet.wsgi.server(eventlet.listen(("0.0.0.0", 5000)), app)
